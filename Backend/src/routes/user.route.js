@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { registerUser, loginUser,changeCurrentUSerPassword,getCurrentUser,updateAccountDetails,updateUserAvatar, getUserChannelProfile, } from "../controllers/user.controller.js";
+import { registerUser, loginUser,changeCurrentUSerPassword,getCurrentUser,updateAccountDetails,updateUserAvatar } from "../controllers/user.controller.js";
 import { auhtMiddleware } from "../middleware/auth.js";
 import upload from "../middleware/multer.js";
 
@@ -17,11 +17,11 @@ router.route('/').post(
     ),
     registerUser
 )
-
 router.route('/').post(loginUser)
 
 router.route('/change-password').patch(auhtMiddleware,changeCurrentUSerPassword)
 router.route('/current-user').get(auhtMiddleware,getCurrentUser)
 router.route('/update-account').patch(auhtMiddleware,updateAccountDetails)
 router.route('/avatar').patch(auhtMiddleware,upload.single("avatar"), updateUserAvatar)
-router.route('/c/:userName').get(auhtMiddleware, getUserChannelProfile)
+
+export default router;

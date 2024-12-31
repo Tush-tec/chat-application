@@ -38,8 +38,6 @@ const userSchema = new  Schema(
         },
         loginType: {
             type: String,
-            enum: AvailableSocialLogins,
-            default: UserLoginType.EMAIL_PASSWORD,
           },
         refreshToken: {
             type: String,
@@ -66,7 +64,7 @@ userSchema.pre("save", async function (next) {
 });
 
 
-userSchema.methods.isPasswordCorrect() = async function(password){
+userSchema.methods.isPasswordCorrect = async function(password){
     return await bcrypt.compare(password, this.password)
 }
 

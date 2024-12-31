@@ -1,13 +1,12 @@
-import mongoose, { mongo } from "mongoose";
-import { ChatEventEnum } from "../../../constants.js";
+import mongoose from "mongoose";
+import { ChatEventEnum } from '../constant.js';
 import { User } from "../models/user.model.js";
 import { Chat } from "../models/chat.model.js";
 import { Message } from "../models/message.model.js";
-import { emitSocketEvent } from "../../../socket/index.js";
+import { emitSocketEvent } from "../Socket/soket.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { removeLocalFile } from "../../../utils/helpers.js";
 
 /**
  * @description Utility function which returns the pipeline stages to structure the chat schema with common lookups
@@ -101,9 +100,16 @@ const searhOnlineUser = asyncHandler(async (req, res) => {
       },
     },
   ]);
+
+  const payload = checkingForOnUser[0];
+
+  if (!payload) {
+    throw new ApiError(404, "No user found");
+  }
+
   return res
     .status(201)
-    .josn(new ApiResponse(201, checkingForOnUser, "here is on Users"));
+    .json(new ApiResponse(201, checkingForOnUser, "here is on Users"));
 });
 
 const createAndGetOneOnOneChat = asyncHandler(async (req, res) => {
@@ -116,7 +122,7 @@ const createAndGetOneOnOneChat = asyncHandler(async (req, res) => {
    * if we find the chat that means user already has created a chat
    * if not we need to create a new one on one chat
    * structure the chat as per the common aggregation to keep the consistency
-   * logic to emit socket event about the new chat added to the participants
+   * logic to emit socket event about the new chat addedif to the participants
    */
 
   const { recieverId } = req.params;
@@ -137,14 +143,18 @@ const createAndGetOneOnOneChat = asyncHandler(async (req, res) => {
       $match: {
         isGroupChat: false,
         // Also, filter chats with participants having receiver and logged in user only
-        $and: {
-          members: {
-            $elemMatch: { $eq: req.user?._id },
+        $and: [
+          {
+            members: {
+              $elemMatch: { $eq: req.user?._id },
+            },
           },
-          members: {
-            $elemMatch: { $eq: recieverId },
+          {
+            members: {
+              $elemMatch: { $eq: recieverId },
+            },
           },
-        },
+        ],
       },
     },
     ...commonAggregationForChats(),
@@ -200,7 +210,7 @@ const createAndGetOneOnOneChat = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .json(new ApiError(201, payload, "Chat created successfully"));
+    .json(new ApiResponse(201, payload, "Chat created successfully"));
 });
 
 const creatAGroupChat = asyncHandler(async (req, res) => {
@@ -344,10 +354,12 @@ const renameGroupChat = asyncHandler(async (req, res) => {
   const { chatId } = req.params;
   const { name } = req.body;
 
-  if (!chatId || name) {
+  if (!chatId || !name) {
     throw ApiError(400, "Chat ID and name are required");
   }
-
+  if (!mongoose.isValidObjectId(chatId)) {
+    throw new ApiError(400, "Invalid Chat ID");
+  }
   const groupChatName = await Chat.findOne({
     _id: new mongoose.Types.ObjectId(chatId),
     isGroupChat: true,
@@ -386,7 +398,7 @@ const renameGroupChat = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Internal server error");
   }
 
-  payload?.members?.forEach((participant) => {
+  payload.members?.forEach((participant) => {
     emitSocketEvent(
       req,
       participant._id?.toString(),
@@ -484,95 +496,76 @@ const leaveGroupChat = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Group chat does not exist");
   }
 
-  const existingMembersInTheGroup = existingGroupChat.members
+  const existingMembersInTheGroup = existingGroupChat.members;
 
-  if(!existingMembersInTheGroup?.includes(req.user?._id)){
+  if (!existingMembersInTheGroup?.includes(req.user?._id)) {
     throw new ApiError(404, "You are not a member of this group");
   }
 
-  const updateChat  = await Chat.findByIdAndUpdate(
+  const updateChat = await Chat.findByIdAndUpdate(
     chatId,
     {
       $pull: {
-        members: req.user?._id // leave the group
-      }
+        members: req.user?._id, // leave the group
+      },
     },
-    {new : true}
-  )
+    { new: true }
+  );
 
   const chat = await Chat.aggregate([
     {
-      $match:{
-        _id:updateChat._id
-      }
+      $match: {
+        _id: updateChat._id,
+      },
     },
-    ...commonAggregationForChats()
-  ])
+    ...commonAggregationForChats(),
+  ]);
 
-  const payload =  chat[0]
+  const payload = chat[0];
 
-  if(!payload){
+  if (!payload) {
     throw new ApiError(
       500,
       "Group chat not found, due to internal server error"
-    )
+    );
   }
 
   return res
-  .status(201)
-  .json(
-    new ApiResponse(
-      201,
-      "Group chat left successfully",
-    )
-  )
+    .status(201)
+    .json(new ApiResponse(201, "Group chat left successfully"));
 });
 
 const addNewMemberInGroup = asyncHandler(async (req, res) => {
-  const {chatId, membersId} = req.params
+  const { chatId, membersId } = req.params;
 
-  if(!mongoose.isValidObjectId(chatId)){
-    throw new ApiError(
-      400,
-      "Invalid chat id"
-    )
+  if (!mongoose.isValidObjectId(chatId)) {
+    throw new ApiError(400, "Invalid chat id");
   }
 
-  const isAllReadyBeGroupMember = await Chat.findOne(
-    {
-      _id: mongoose.Types.ObjectId(chatId),
-      isGroup: true
-    }
-  ) 
+  const isAllReadyBeGroupMember = await Chat.findOne({
+    _id: mongoose.Types.ObjectId(chatId),
+    isGroup: true,
+  });
 
-  if(!isAllReadyBeGroupMember){
-    throw new ApiError(
-      400,
-      "This chat is not a group chat"
-    )
+  if (!isAllReadyBeGroupMember) {
+    throw new ApiError(400, "This chat is not a group chat");
   }
 
-  if(isAllReadyBeGroupMember.admin?.toString() !== req.user._id?.toString()){
-    throw new ApiError(
-      403,
-      "You are not the admin of this group chat"
-    )
+  if (isAllReadyBeGroupMember.admin?.toString() !== req.user._id?.toString()) {
+    throw new ApiError(403, "You are not the admin of this group chat");
   }
 
-  const existingMember = isAllReadyBeGroupMember.members
+  const existingMember = isAllReadyBeGroupMember.members;
 
-  if(existingMember?.includes(membersId)){
-    throw new ApiError(
-      400,
-      "This member is already in the group chat"
-    )
+  if (existingMember?.includes(membersId)) {
+    throw new ApiError(400, "This member is already in the group chat");
   }
 
   const updatedChat = await Chat.findByIdAndUpdate(
     chatId,
     {
       $push: {
-        members: membersId, 
+        members: membersId,
       },
     },
     { new: true }
@@ -593,23 +586,100 @@ const addNewMemberInGroup = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Internal server error");
   }
 
-
   emitSocketEvent(req, participantId, ChatEventEnum.NEW_CHAT_EVENT, payload);
 
-
   return res
-  .status(201)
-  .json(
-    new ApiResponse(
-      201,
-      "Group chat updated successfully",
-    )
-  )
+    .status(201)
+    .json(new ApiResponse(201, "Group chat updated successfully"));
 });
 
-const removeMemberFromGroup = asyncHandler(async (req, res) => {});
+const removeMemberFromGroup = asyncHandler(async (req, res) => {
+  const { chatId, membersId } = req.params;
 
-const getAllChat = asyncHandler(async (req, res) => {});
+  const isGroupChatExist = await chatId.findOne({
+    _id: new mongoose.Types.ObjectId(chatId),
+    isGroupChat: true,
+  });
+
+  if (!isGroupChatExist) {
+    throw new ApiError(404, "Group chat not found");
+  }
+
+  if (isGroupChatExist.admin?.toString() !== req.user._id?.toString()) {
+    throw new ApiError(403, "You are not authorized to perform this action");
+  }
+
+  const existingGroupMember = isGroupChatExist.members;
+
+  if (!existingGroupMember?.includes(membersId)) {
+    throw new ApiError(404, "Member not found in the group chat");
+  }
+
+  const updateGroupChatByPerformingGroupQuery = await Chat.findByIdAndUpdate(
+    chatId,
+    {
+      $pull: {
+        member: membersId,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  if (!updateGroupChatByPerformingGroupQuery) {
+    throw new ApiError(500, "Failed to update group chat");
+  }
+
+  const chat = await Chat.aggregate([
+    {
+      $match: {
+        _id: updateGroupChatByPerformingGroupQuery._id,
+      },
+    },
+    ...chatCommonAggregation(),
+  ]);
+
+  const payload = chat[0];
+
+  if (!payload) {
+    throw new ApiError(500, "Failed to get chat data");
+  }
+
+  emitSocketEvent(req, membersId, ChatEventEnum.LEAVE_CHAT_EVENT, payload);
+
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(201, payload, "Member left the group chat successfully")
+    );
+});
+
+const getAllChat = asyncHandler(async (req, res) => {
+  const chats = await Chat.aggregate([
+    {
+      $match: {
+        member: {
+          $elemMatch: {
+            $eq: req.user._id,
+          },
+        },
+      },
+    },
+    {
+      $sort: {
+        updatedAt: -1,
+      },
+    },
+    ...chatCommonAggregation(),
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, chats || [], "User chats fetched successfully!")
+    );
+});
 
 /**
  *
@@ -617,4 +687,15 @@ const getAllChat = asyncHandler(async (req, res) => {});
  * @description utility function responsible for removing all the messages and file attachments attached to the deleted chat
  */
 
-export { searhOnlineUser, createAndGetOneOnOneChat };
+export {
+  searhOnlineUser,
+  createAndGetOneOnOneChat,
+  creatAGroupChat,
+  getGroupChatDetails,
+  renameGroupChat,
+  deleteGroupChat,
+  leaveGroupChat,
+  addNewMemberInGroup,
+  removeMemberFromGroup,
+  getAllChat,
+};
