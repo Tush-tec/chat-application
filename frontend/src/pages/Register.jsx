@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { LockClosedIcon } from '@heroicons/react/20/solid'
+import Input from '../component/Input'
 
 
 const Register = () => {
