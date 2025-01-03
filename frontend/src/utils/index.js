@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const requestHandler = async (api, setLoading, onSuccess, onError) => {
+  
   // Show loading state if setLoading function is provided
   setLoading && setLoading(true);
   try {
@@ -95,45 +96,46 @@ const getMetaDataOfChatObject = (chat, loggedinUser) => {
   }
 };
 
-// Get a value from the localStorage by key 
-const getLocalStorage = (key) =>{
-    if(!isBrowser) return null
+class LocalStorage {
+  // Check if the code is running in the browser
+  static isBrowser = typeof window !== "undefined";
 
-    const value = localStorage.getItem(key)
-    console.log(value);
-    
-    if(value){
-        try {
-            return JSON.parse(value)
-        } catch (error) {
-          return null   
-        }
+  // Get a value from local storage by key
+  static get(key) {
+    if (!LocalStorage.isBrowser) return;
+    const value = localStorage.getItem(key);
+    if (value) {
+      try {
+        return JSON.parse(value);
+      } catch (err) {
+        return null;
+      }
     }
-   return null 
-} 
+    return null;
+  }
 
-// set a value from the localStorage by key, value 
-const setLocalStorage = (key,value) => {
-    if(!isBrowser) return
-    localStorage.setItem(key, JSON.stringify(value))
-}
-// remove a value from the localStorage by key 
-const removeLocalStorage = (key) =>{
-    if(!isBrowser) return
-    localStorage.removeItem(key)
+  // Set a value in local storage by key
+  static set(key, value) {
+    if (!LocalStorage.isBrowser) return;
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+
+  // Remove a value from local storage by key
+  static remove(key) {
+    if (!LocalStorage.isBrowser) return;
+    localStorage.removeItem(key);
+  }
+
+  // Clear all items from local storage
+  static clear() {
+    if (!LocalStorage.isBrowser) return;
+    localStorage.clear();
+  }
 }
 
-// Clear Storage:
-const clearStorage = () =>{
-    if(!isBrowser) return 
-    localStorage.clear()
-}
 
 export{
     requestHandler,
     getMetaDataOfChatObject,
-    getLocalStorage,
-    setLocalStorage,
-    removeLocalStorage,
-    clearStorage
+    LocalStorage
 }
