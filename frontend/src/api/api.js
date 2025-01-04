@@ -16,7 +16,7 @@ apiClient.interceptors.request.use(
         // Retrieve user token from local storage
         const token = localStorage.get("token")
         // Set authorization header with bearer token
-        config.headers.Authorization = `Bearer ${token}`
+        config.headers.Authorization = `Bearer ${token}` 
         return config
     },
     function (error) {
@@ -32,10 +32,15 @@ const loginUser = (data) => {
     return apiClient.post("/users/register",  data)
 }
 
-const logoutUser = () => {
+const logoutUser = (data) => {
     return apiClient.get("/users/logout", data)
 }
 
+const createUserChat = (receiverId) => {
+    return apiClient.post(`/chat-app/chats/c/${receiverId}`);
+  };
+
+  
 const getAvailableUser = () =>{
     return apiClient.get("/chat-app/chats/users")
 }
@@ -98,6 +103,7 @@ export {
     registerUser,
     loginUser,
     logoutUser,
+    createUserChat,
     getAvailableUser,
     getUserChats,
     createGroupChat,

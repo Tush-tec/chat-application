@@ -3,7 +3,7 @@ import React from 'react'
 const Button = ({
     fullwidth = false,
     severity = "primary",
-    size = base,
+    size = "base",
     className = "",
     children,
     ...props

@@ -33,6 +33,9 @@ const io = new Server(httpServer, {
 
 app.set("io", io); // using set method to mount the `io` instance on the app to avoid usage of `global`
 
+// app.get("/", (req,res) => {
+//   res.send("hello this function is running on server!")
+// })
 
 import userRouter from './routes/user.route.js'
 import chatRouter from './routes/chat.router.js'

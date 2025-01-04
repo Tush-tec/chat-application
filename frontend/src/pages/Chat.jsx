@@ -7,9 +7,13 @@ import React from "react";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
-import { deleteMessage, deleteOneOnOneChat, getMessage, getUserChats, sendMessage } from "../api/api";
-import { LocalStorage, requestHandler } from "../utils";
-import { data } from "react-router-dom";
+import { deleteMessage, getMessage, getUserChats, sendMessage } from "../api/api";
+import { classNames, getMetaDataOfChatObject, LocalStorage, requestHandler } from "../utils";
+import AddChatModal from "../component/chat/AddChatModal";
+import Input from "../component/Input";
+import Typing from "../component/chat/Typing";
+import ChatItem from "../component/chat/ChatIteam";
+import MessageItem from "../component/chat/MessageItem";
 
 const CONNECTED_EVENT = "connected";
 const DISCONNECT_EVENT = "disconnect";
@@ -46,9 +50,10 @@ const Chat = () => {
 
   const [isTyping, setIsTyping] = useState(false);
   const [selfTyping, setSelfTyping] = useState(false); // To track if the current user is typing
-  const [typingMessage, setTypingMessage] = useState("");
+  // const [typingMessage, setTypingMessage] = useState("");
 
   const [attachedFiles, setAttachedFiles] = useState([]); // To store files attached to messages
+  const [localSearchQuery, setLocalSearchQuery] = useState("");
 
   // A function to update the last message of a specified chat to update the chat list
 
@@ -125,10 +130,10 @@ const Chat = () => {
   };
 
   const sendChatMessage = async () => {
-    if (currentChatRef.current?._id || !socket) return;
-
+    if (!currentChatRef.current?._id || !socket) return;
+  
     socket.emit(STOP_TYPING_EVENT, currentChatRef.current?._id);
-
+  
     await requestHandler(
       async () =>
         await sendMessage(
@@ -139,14 +144,15 @@ const Chat = () => {
       null,
       // On successful message sending, clear the message input and attached files, then update the UI
       (res) => {
-        setMessages(""),
-          setAttachedFiles([]),
-          setMessages((prev) => [res.data, ...prev]);
+        setMessages([]); // Clear messages (if that's the intent)
+        setAttachedFiles([]); // Clear attached files
+        setMessages((prev) => [res.data, ...prev]); // Update messages with new data
         updateLastMessage(currentChatRef.current?._id || "", res.data);
       },
       alert
     );
   };
+  
 
   const deleteChatMessage = async () => {
     await requestHandler(
@@ -341,7 +347,248 @@ const Chat = () => {
   
   return (
     <>
-    </>
+    <AddChatModal
+      open={openAddChat}
+      onClose={() => {
+        setOpenAddChat(false);
+      }}
+      onSuccess={() => {
+        getChats();
+      }}
+    />
+
+    <div className="w-full justify-between items-stretch h-screen flex flex-shrink-0">
+      <div className="w-1/3 relative ring-white overflow-y-auto px-4">
+        <div className="z-10 w-full sticky top-0 bg-dark py-4 flex justify-between items-center gap-4">
+          <button
+            type="button"
+            className="focus:outline-none text-white bg-purple-700 hover:bg-purple-800 focus:ring-4 focus:ring-purple-300 font-medium rounded-xl text-sm px-5 py-4 mb-2 dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-900 flex-shrink-0"
+            onClick={logout}
+          >
+            Log Out
+          </button>
+
+          <Input
+            placeholder="Search user or group..."
+            value={localSearchQuery}
+            onChange={(e) =>
+              setLocalSearchQuery(e.target.value.toLowerCase())
+            }
+          />
+          <button
+            onClick={() => setOpenAddChat(true)}
+            className="rounded-xl border-none bg-primary text-white py-4 px-5 flex flex-shrink-0"
+          >
+            + Add chat
+          </button>
+        </div>
+        {loadingChat ? (
+          <div className="flex justify-center items-center h-[calc(100%-88px)]">
+            <Typing />
+          </div>
+        ) : (
+          // Iterating over the chats array
+          [...chats]
+            // Filtering chats based on a local search query
+            .filter((chat) =>
+              // If there's a localSearchQuery, filter chats that contain the query in their metadata title
+              localSearchQuery
+                ? getMetaDataOfChatObject(chat, user)?.title?.toLocaleLowerCase()
+                    ?.includes(localSearchQuery)
+                : // If there's no localSearchQuery, include all chats
+                  true
+            )
+            .map((chat) => {
+              return (
+                <ChatItem
+                  chat={chat}
+                  isActive={chat._id === currentChatRef.current?._id}
+                  unreadCount={
+                    unreadMessage.filter((n) => n.chat === chat._id).length
+                  }
+                  onClick={(chat) => {
+                    if (
+                      currentChatRef.current?._id &&
+                      currentChatRef.current?._id === chat._id
+                    )
+                      return;
+                    LocalStorage.set("currentChatRef", chat);
+                    currentChatRef.current = chat;
+                    setMessages("");
+                    getMessages();
+                  }}
+                  key={chat._id}
+                  onChatDelete={(chatId) => {
+                    setChats((prev) =>
+                      prev.filter((chat) => chat._id !== chatId)
+                    );
+                    if (currentChatRef.current?._id === chatId) {
+                      currentChatRef.current = null;
+                      LocalStorage.remove("currentChat");
+                    }
+                  }}
+                />
+              );
+            })
+        )}
+      </div>
+      <div className="w-2/3 border-l-[0.1px] border-secondary">
+        {currentChatRef.current && currentChatRef.current?._id ? (
+          <>
+            <div className="p-4 sticky top-0 bg-dark z-20 flex justify-between items-center w-full border-b-[0.1px] border-secondary">
+              <div className="flex justify-start items-center w-max gap-3">
+                {currentChatRef.current.isGroupChat ? (
+                  <div className="w-12 relative h-12 flex-shrink-0 flex justify-start items-center flex-nowrap">
+                    {currentChatRef.current.participants
+                      .slice(0, 3)
+                      .map((participant, i) => {
+                        return (
+                          <img
+                            key={participant._id}
+                            src={participant.avatar.url}
+                            alt={""}
+                            className={classNames(
+                              "w-9 h-9 border-[1px] border-white rounded-full absolute outline outline-4 outline-dark",
+                              i === 0
+                                ? "left-0 z-30"
+                                : i === 1
+                                ? "left-2 z-20"
+                                : i === 2
+                                ? "left-4 z-10"
+                                : ""
+                            )}
+                          />
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <img
+                    className="h-14 w-14 rounded-full flex flex-shrink-0 object-cover"
+                    src={
+                      getMetaDataOfChatObject(currentChatRef.current, user)?.avatar
+                    }
+                  />
+                )}
+                <div>
+                  <p className="font-bold">
+                    {getMetaDataOfChatObject(currentChatRef.current, user)?.title}
+                  </p>
+                  <small className="text-zinc-400">
+                    {
+                      getMetaDataOfChatObject(currentChatRef.current, user)?.description
+                    }
+                  </small>
+                </div>
+              </div>
+            </div>
+            <div
+              className={classNames(
+                "p-8 overflow-y-auto flex flex-col-reverse gap-6 w-full",
+                attachedFiles.length > 0
+                  ? "h-[calc(100vh-336px)]"
+                  : "h-[calc(100vh-176px)]"
+              )}
+              id="message-window"
+            >
+              {loadingMessages ? (
+                <div className="flex justify-center items-center h-[calc(100%-88px)]">
+                  <Typing />
+                </div>
+              ) : (
+                <>
+                  {isTyping ? <Typing /> : null}
+                  {messages?.map((msg) => {
+                    return (
+                      <MessageItem
+                        key={msg._id}
+                        isOwnMessage={msg.sender?._id === user?._id}
+                        isGroupChatMessage={currentChatRef.current?.isGroupChat}
+                        message={msg}
+                        deleteChatMessage={deleteChatMessage}
+                      />
+                    );
+                  })}
+                </>
+              )}
+            </div>
+            {attachedFiles.length > 0 ? (
+              <div className="grid gap-4 grid-cols-5 p-4 justify-start max-w-fit">
+                {attachedFiles.map((file, i) => {
+                  return (
+                    <div
+                      key={i}
+                      className="group w-32 h-32 relative aspect-square rounded-xl cursor-pointer"
+                    >
+                      <div className="absolute inset-0 flex justify-center items-center w-full h-full bg-black/40 group-hover:opacity-100 opacity-0 transition-opacity ease-in-out duration-150">
+                        <button
+                          onClick={() => {
+                            setAttachedFiles(
+                              attachedFiles.filter((_, ind) => ind !== i)
+                            );
+                          }}
+                          className="absolute -top-2 -right-2"
+                        >
+                          <XCircleIcon className="h-6 w-6 text-white" />
+                        </button>
+                      </div>
+                      <img
+                        className="h-full rounded-xl w-full object-cover"
+                        src={URL.createObjectURL(file)}
+                        alt="attachment"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+            <div className="sticky top-full p-4 flex justify-between items-center w-full gap-2 border-t-[0.1px] border-secondary">
+              <input
+                hidden
+                id="attachments"
+                type="file"
+                value=""
+                multiple
+                max={5}
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setAttachedFiles([...e.target.files]);
+                  }
+                }}
+              />
+              <label
+                htmlFor="attachments"
+                className="p-4 rounded-full bg-dark hover:bg-secondary"
+              >
+                <PaperClipIcon className="w-6 h-6" />
+              </label>
+
+              <Input
+                placeholder="Message"
+                value={messages}
+                onChange={handleOnMessageChange}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    sendChatMessage();
+                  }
+                }}
+              />
+              <button
+                onClick={sendChatMessage}
+                disabled={!messages && attachedFiles.length <= 0}
+                className="p-4 rounded-full bg-dark hover:bg-secondary disabled:opacity-50"
+              >
+                <PaperAirplaneIcon className="w-6 h-6" />
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="w-full h-full flex justify-center items-center">
+            No chat selected
+          </div>
+        )}
+      </div>
+    </div>
+  </>
   )
 };
 

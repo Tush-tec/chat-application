@@ -1,141 +1,118 @@
-import axios from "axios";
+const isBrowser = typeof window !== "undefined"; // Move this outside the class
 
 const requestHandler = async (api, setLoading, onSuccess, onError) => {
-  
-  // Show loading state if setLoading function is provided
-  setLoading && setLoading(true);
   try {
-    // Api request
-    const responseFromApi = await api();
-    console.log(`response from that given by api: ${responseFromApi}`);
+    // Show loading state if setLoading function is provided
+    setLoading && setLoading(true);
 
-    const { data } = responseFromApi;
+    const { data } = await api(); // Direct destructuring
+    console.log(`response from API: ${data}`);
+
+    // Ensure data exists and has success field
     if (data?.success) {
-      onSuccess(data);
+      onSuccess(data); // Success callback
+    } else {
+      // If the success flag is false, handle it as an error
+      onError('Something went wrong with the API response');
     }
   } catch (error) {
-    // Handle error cases, including unauthorized and forbidden cases
+    // Handle error cases gracefully
+    let errorMessage = 'Something went wrong.';
 
-    if ([401, 403].includes(error?.response?.data?.statusCode)) {
-      localStorage.clear();
-      if (isBrowser) window.location.href = "/login";
+    // Check if error response structure matches your API's format
+    if (error?.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error?.message) {
+      errorMessage = error.message; // Fallback to the error message
     }
-    onError(
-      error?.responseFromApi?.data?.message ||
-        "Some Went wrong while setting utils.."
-    );
+
+    onError(errorMessage);
+
+    // Handle specific status codes (401, 403)
+    if (error?.response?.data?.statusCode && [401, 403].includes(error.response.data.statusCode)) {
+      localStorage.clear();
+      
+      // Check if it's running in the browser environment
+      if (typeof window !== 'undefined') {
+        window.location.href = "/login"; // Redirection in a browser environment
+      }
+    }
   } finally {
     // Hide loading state if setLoading function is provided
     setLoading && setLoading(false);
   }
 };
 
-// Check if the code is running in a browser environment
-const isBrowser = typeof window !== "undefined";
-
-// This utility function generates metadata for chat objects.
-// It takes into consideration both group chats and individual chats.
-
 const getMetaDataOfChatObject = (chat, loggedinUser) => {
-  // If there’s content,shows the content as the last message.
-  // If there are only attachments, counts them and displays the number.
+  const { lastMessage, participants,  isGroupChat, name } = chat; // Destructuring
 
-  const lastMessage = chat.lastMessage?.content
-    ? chat.lastMessage?.content
-    : chat.lastMessage
-    ? `${chat.lastMessage?.attachments?.length} attachment ${
-        chat.lastMessage.attachments.length > 1 ? "S" : ""
-      }`
+  // Generate last message content
+  const lastMessageContent = lastMessage?.content
+    ? lastMessage.content
+    : lastMessage?.attachments?.length
+    ? `${lastMessage.attachments.length} attachment${lastMessage.attachments.length > 1 ? 's' : ''}`
     : "No message yet";
 
-  //     const lastMessage = chat.lastMessage?.content
-  //     ? chat.lastMessage?.content
-  //     : chat.lastMessage
-  //     ? `${chat.lastMessage?.attachments?.length} attachment${
-  //         chat.lastMessage.attachments.length > 1 ? "s" : ""
-  //       }`
-  //     : "No messages yet"; // Placeholder text if there are no messages.
-
-  // If the chat is a group chat, it shows the number of members in the group.
-  const isGroupChat = chat.type === "group";
-  const groupChatMembers = isGroupChat ? chat.members?.length : 0;
-  // If the chat is a group chat, it shows the number of unread messages.
-  const unreadMessages = chat.unreadCount;
-  // If the chat is a group chat, it shows the number of unread messages.
-  const isUnread = unreadMessages > 0;
-
-  
-  if (chat.isGroupChat) {
-    /**
-     *  Case : Group Chat
-     *  Return  MetaData Specific Group Chat.
-     */
+  if (isGroupChat) {
+    // Group Chat Metadata
     return {
-      avatar: "https://via.placeholder.com/100x100.png", // Default avatar for group chats
-      title: chat.name, // Group name serves as the title
-      description: `${chat.participants.length} members in the chat`, // Description indicates the number of members
-      lastMessage: chat.lastMessage
-        ? chat.lastMessage?.sender?.username + ": " + lastMessage
-        : lastMessage,
+      avatar: "https://via.placeholder.com/100x100.png", // Placeholder avatar
+      title: name,
+      description: `${participants.length} members`,
+      lastMessage: `${lastMessage?.sender?.username || 'Unknown'}: ${lastMessageContent}`,
     };
-  } else {
-    {
-      // Case: Individual chat
-      // Identify the participant other than the logged-in user
-      const participant = chat.participants.find(
-        (p) => p._id !== loggedInUser?._id
-      );
-      // Return metadata specific to individual chats
-      return {
-        avatar: participant?.avatar?.url, // Participant's avatar URL
-        title: participant?.username, // Participant's username serves as the title
-        description: participant?.email, // Email address of the participant
-        lastMessage,
-      };
-    }
   }
+
+  // Individual Chat Metadata
+  const participant = participants.find(p => p._id !== loggedinUser?._id);
+  return {
+    avatar: participant?.avatar?.url,
+    title: participant?.username,
+    description: participant?.email,
+    lastMessage: lastMessageContent,
+  };
+};
+
+const classNames = (...classNames) => {
+  return classNames.filter(Boolean).join(" "); // Clean and concise class names generator
 };
 
 class LocalStorage {
-  // Check if the code is running in the browser
   static isBrowser = typeof window !== "undefined";
 
-  // Get a value from local storage by key
   static get(key) {
-    if (!LocalStorage.isBrowser) return;
+    if (!LocalStorage.isBrowser) return null;
     const value = localStorage.getItem(key);
-    if (value) {
-      try {
-        return JSON.parse(value);
-      } catch (err) {
-        return null;
-      }
+    try {
+      return value ? JSON.parse(value) : null;
+    } catch {
+      return null; // Return null if JSON parsing fails
     }
-    return null;
   }
 
-  // Set a value in local storage by key
   static set(key, value) {
-    if (!LocalStorage.isBrowser) return;
-    localStorage.setItem(key, JSON.stringify(value));
+    if (LocalStorage.isBrowser) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
   }
 
-  // Remove a value from local storage by key
   static remove(key) {
-    if (!LocalStorage.isBrowser) return;
-    localStorage.removeItem(key);
+    if (LocalStorage.isBrowser) {
+      localStorage.removeItem(key);
+    }
   }
 
-  // Clear all items from local storage
   static clear() {
-    if (!LocalStorage.isBrowser) return;
-    localStorage.clear();
+    if (LocalStorage.isBrowser) {
+      localStorage.clear();
+    }
   }
 }
 
-
-export{
-    requestHandler,
-    getMetaDataOfChatObject,
-    LocalStorage
-}
+export {
+  requestHandler,
+  getMetaDataOfChatObject,
+  classNames,
+  LocalStorage,
+  isBrowser, // Exported for use in other parts of your code
+};

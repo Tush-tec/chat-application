@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { LockClosedIcon } from "@heroicons/react/20/solid";
 import Input from '../component/Input';
+import { Button } from '@headlessui/react';
 
 const Login = () => {
   const [userLogin, setUserLogin] = useState({
@@ -32,15 +33,17 @@ const Login = () => {
       {/* Input for entering the username */}
       <Input
         placeholder="Enter the username..."
-        value={userLogin.username}
-        onChange={handleOnChange("username")}
+        name="userName"
+        value={userLogin.userName}
+        onChange={handleOnChange}
       />
       {/* Input for entering the password */}
       <Input
         placeholder="Enter the password..."
+        name="password"
         type="password"
         value={userLogin.password}
-        onChange={handleOnChange("password")}
+        onChange={handleOnChange}
       />
       {/* Button to initiate the login process */}
       <Button
