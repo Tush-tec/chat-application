@@ -61,40 +61,32 @@ const Chat = () => {
     setChats(updateChats);
   };
 
-  const updateMessageOnDeletion = (chatsToUpdateId, messages) => {
-    const chatToUpdate = chats.find((chat) => chat._id === chatsToUpdateId);
-
-    console.log("chatToUpdate : ", chatToUpdate);
-
-    // Check if the chat exists and the deleted message matches the chat's last message
+  const updateMessageOnDeletion = (chatId, deletedMessage) => {
+    const chatToUpdate = chats.find((chat) => chat._id === chatId);
+  
     if (
       chatToUpdate &&
       chatToUpdate.lastMessage &&
-      chatToUpdate.lastMessage._id === messages._id
+      chatToUpdate.lastMessage._id === deletedMessage._id
     ) {
-      // Use requestHandler to fetch updated chat messages
       requestHandler(
-        () => getMessage(chatsToUpdateId),
+        () => getMessage(chatId),
         null,
         (data) => {
-          const newLastMessage = data[0]; // Assuming the first message in the response is the new last message
-          chatToUpdate.lastMessage = newLastMessage; // Update the last message of the chat
-
-          // Update the chats state by replacing the old chat with the updated one
-          const updatedChats = chats.map((chat) =>
-            chat._id === chatToUpdate
-              ? { ...chat, lastMessage: newLastMessage }
-              : chat
+          const newLastMessage = data?.[0] || null; // Handle empty responses
+          setChats((prevChats) =>
+            prevChats.map((chat) =>
+              chat._id === chatId
+                ? { ...chat, lastMessage: newLastMessage }
+                : chat
+            )
           );
-          setChats(updatedChats);
         },
-        (error) => {
-          // Handle error if API call fails
-          alert(`Error: ${error}`);
-        }
+        alert // Handle errors
       );
     }
   };
+  
 
   const getChats = async () => {
     requestHandler(
@@ -191,18 +183,6 @@ const Chat = () => {
       setSelfTyping(false);
     }, timerLength);
 
-    const onConnect = () => {
-      setIsConnected(true)
-    }
-
-    const onDisconnect = () => {
-      setIsConnected(false)
-    }
-
-
-
-
-
     // if (currentChatRef.current?._id || !socket) return;
     // socket.emit(STOP_TYPING_EVENT, currentChatRef.current?._id);
     // await requestHandler(
@@ -222,6 +202,14 @@ const Chat = () => {
     //   alert
     // );
   };
+
+  const onConnect = () => {
+    setIsConnected(true)
+  }
+
+  const onDisconnect = () => {
+    setIsConnected(false)
+  }
 
   const handleOnSocketTyping = (chatId) => {
 
@@ -274,7 +262,7 @@ const Chat = () => {
     setChats((prev) => prev.filter((c) => c.id !== chat.id))
   }
 
-  const OnGroupName = (chat) => {
+  const onGroupNameChange = (chat) => {
     // Check if the chat being changed is the currently active chat
     if(chat.id === (currentChatRef.current && currentChatRef.current._id)){
       currentChatRef.current = chat
@@ -285,7 +273,76 @@ const Chat = () => {
     setChats((prev) => prev.map((c) => c.id === chat.id ? chat : c ))
 
   }
-  return <div></div>;
+
+  useEffect(() => {
+    // Fetch the chat list from the server.
+    getChats();
+  
+    // Retrieve the current chat details from local storage.
+    const getCurrentChat = LocalStorage.get("currentChatRef");
+  
+    // If there's a current chat saved in local storage:
+    if (getCurrentChat) {
+      // Set the current chat reference to the one from local storage.
+      currentChatRef.current = getCurrentChat;
+  
+      // If the socket connection exists, emit an event to join the specific chat using its ID.
+      socket?.emit(JOIN_CHAT_EVENT, getCurrentChat?._id);
+  
+      // Fetch the messages for the current chat.
+      getMessage();
+    }
+  }, []);
+
+  useEffect(() => {
+    if(!socket) return 
+
+     // Set up event listeners for various socket events:
+    // Listener for when the socket connects.
+    socket.on(CONNECTED_EVENT, onConnect);
+    // Listener for when the socket disconnects.
+    socket.on(DISCONNECT_EVENT, onDisconnect);
+    // Listener for when a user is typing.
+    socket.on(TYPING_EVENT, handleOnSocketTyping);
+    // Listener for when a user stops typing.
+    socket.on(STOP_TYPING_EVENT, handleOnSocketStopTyping);
+    // Listener for when a new message is received.
+    socket.on(MESSAGE_RECEIVED_EVENT, onMessageReceived);
+    // Listener for the initiation of a new chat.
+    socket.on(NEW_CHAT_EVENT, onNewChat);
+    // Listener for when a user leaves a chat.
+    socket.on(LEAVE_CHAT_EVENT, onChatLeave);
+    // Listener for when a group's name is updated.
+    socket.on(UPDATE_GROUP_NAME_EVENT, onGroupNameChange);
+    //Listener for when a message is deleted
+    socket.on(MESSAGE_DELETE_EVENT, onMessageDelete);
+    // When the component using this hook unmounts or if `socket` or `chats` change:
+    return () => {
+      // Remove all the event listeners we set up to avoid memory leaks and unintended behaviors.
+      socket.off(CONNECTED_EVENT, onConnect);
+      socket.off(DISCONNECT_EVENT, onDisconnect);
+      socket.off(TYPING_EVENT, handleOnSocketTyping);
+      socket.off(STOP_TYPING_EVENT, handleOnSocketStopTyping);
+      socket.off(MESSAGE_RECEIVED_EVENT, onMessageReceived);
+      socket.off(NEW_CHAT_EVENT, onNewChat);
+      socket.off(LEAVE_CHAT_EVENT, onChatLeave);
+      socket.off(UPDATE_GROUP_NAME_EVENT, onGroupNameChange);
+      socket.off(MESSAGE_DELETE_EVENT, onMessageDelete);
+    };
+
+    // Note:
+    // The `chats` array is used in the `onMessageReceived` function.
+    // We need the latest state value of `chats`. If we don't pass `chats` in the dependency array,
+    // the `onMessageReceived` will consider the initial value of the `chats` array, which is empty.
+    // This will not cause infinite renders because the functions in the socket are getting mounted and not executed.
+    // So, even if some socket callbacks are updating the `chats` state, it's not
+    // updating on each `useEffect` call but on each socket call.
+  },[socket,chats])
+  
+  return (
+    <>
+    </>
+  )
 };
 
 export default Chat;
