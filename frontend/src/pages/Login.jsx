@@ -48,7 +48,7 @@ const Login = () => {
       {/* Button to initiate the login process */}
       <Button
         disabled={Object.values(userLogin).some((val) => !val)}
-        fullWidth
+        // fullWidth
         onClick={handleLogin}
       >
         Login

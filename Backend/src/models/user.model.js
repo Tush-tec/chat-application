@@ -1,9 +1,8 @@
-import mongoose,{Schema} from "mongoose";
-import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
+import mongoose, { Schema } from "mongoose";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 
-
-const userSchema = new  Schema(
+const userSchema = new mongoose.Schema(
     {
         userName: {
             type: String,
@@ -13,32 +12,30 @@ const userSchema = new  Schema(
             trim: true,
             index: true
         },
-        fullname :{
-            type: String,
-            required: true,
-            trim: true,
-        },
-        email:{
+        email: {
             type: String,
             required: true,
             unique: true,
             lowercase: true,
+            trim: true
+        },
+        fullName: {
+            type: String,
+            required: true,
             trim: true,
+            index: true
         },
-        avatar :{
-            type:{
-                url:String,
-                localPath: String
-            },
-            default:[]
-        },
-        password :{
+        avatar: {
             type: String,
-            required: [true, "Password is required"],
+            // required: true,
         },
-        loginType: {
+        coverImage: {
             type: String,
-          },
+        },
+        password: {
+            type: String,
+            required: true,
+        },
         refreshToken: {
             type: String,
         }
@@ -46,61 +43,52 @@ const userSchema = new  Schema(
     {
         timestamps: true
     }
-)
+);
 
-// User Authentication : Password-Hashing, Password-Comparison, Token-Generating, Mongoose-Middleware.
-
-//  Steps:
-//  1. intialized the model with mongoose middleware with pre, instalized function for hashing password with condition and write next() to proceed with the next middleware.
-//  2. 2nd middleware is for password comparison with the hashed password in the database
-//  3. 3rd middleware is for generating token with the user data in the databas
-
-
-
+// Middleware for hashing password before saving
 userSchema.pre("save", async function (next) {
     if (!this.isModified("password")) return next();
     this.password = await bcrypt.hash(this.password, 10);
     next();
 });
 
+// Method to compare passwords
+userSchema.methods.isPasswordCorrect = async function (password) {
+    return await bcrypt.compare(password, this.password);
+};
 
-userSchema.methods.isPasswordCorrect = async function(password){
-    return await bcrypt.compare(password, this.password)
-}
-
-// Genrate Access and Refresh Token: 
-//   =>Access Token: Payload, secret, expire
-//   =>Refresh Token: Payload, secret, expire, refresh token expire time
-
-
-userSchema.methods.generateAccessToken  = function (){
-
+// Method for generating access token
+userSchema.methods.generateAccessToken = function () {
     return jwt.sign(
         {
-            _id : this._id,
+            _id: this._id,
             email: this.email,
             userName: this.userName,
-            fullname: this.fullname,
+            fullName: this.fullName
         },
-        process.env.SECRET_FOR_ACCESSTOKEN,
-        {
-            expiresIn: process.env.EXPIRY_FOR_ACCESSTOKEN
-        }
-    )
-}
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+    );
+};
 
-// Generating Token for Refresh Token
-
-userSchema.methods.generateRefreshToken =  function (){
-    return  jwt.sign(
+// Method for generating refresh token
+userSchema.methods.generateRefreshToken = function () {
+    return jwt.sign(
         {
             _id: this._id
         },
-        process.env.SECRET_FOR_REFRESHTOKEN,
+        process.env.REFRESH_TOKEN_SECRET,
         {
-            expiresIn: process.env.EXPIRY_FOR_REFRESHTOKEN
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY
         }
-    )
-}
+    );
+};
 
-export const User =  mongoose.model("User", userSchema)
+
+
+
+export const User = mongoose.model("User", userSchema);
+
+
+
+

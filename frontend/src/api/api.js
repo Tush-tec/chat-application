@@ -14,7 +14,7 @@ apiClient.interceptors.request.use(
 
     function(config){
         // Retrieve user token from local storage
-        const token = localStorage.get("token")
+        const token = localStorage.getItem("token")
         // Set authorization header with bearer token
         config.headers.Authorization = `Bearer ${token}` 
         return config
@@ -25,11 +25,11 @@ apiClient.interceptors.request.use(
 )
 
 const registerUser = (data) =>{
-    return apiClient.post("/users/register", data)
+    return apiClient.post("/users/register-user", data)
 }
 
 const loginUser = (data) => {
-    return apiClient.post("/users/register",  data)
+    return apiClient.post("/users/login-user",  data)
 }
 
 const logoutUser = (data) => {

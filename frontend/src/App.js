@@ -54,9 +54,9 @@ const App = () => {
       <Route
         path="/register"
         element={
-          <PublicRoute>
+          // <PublicRoute>
             <Register />
-          </PublicRoute>
+          // </PublicRoute>
         }
       />
 

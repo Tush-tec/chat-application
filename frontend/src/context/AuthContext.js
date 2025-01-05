@@ -34,7 +34,9 @@ const AuthProvider = ({ children }) => {
         alert("Account Created Successfully! Go ahead and Login.");
         navigate('/login');
       },
-      alert
+     (error)=>{
+      console.error("Register failed:", error.message || error);
+     }
     );
   };
 
@@ -62,12 +64,14 @@ const AuthProvider = ({ children }) => {
       () => {
         setUser(null);
         setToken(null);
-        LocalStorage.clear();
+        localStorage.clear();
         navigate('/login');
       },
       alert
     );
   };
+
+  // console.log(LocalStorage.get())
 
   useEffect(() => {
     const getToken = LocalStorage.get('Token'); // Token is saved with this key, not 'token'
@@ -76,6 +80,8 @@ const AuthProvider = ({ children }) => {
     if (getToken && getUser && getUser._id) {
       setToken(getToken);
       setUser(getUser);
+    } else {
+      console.error()
     }
 
     setIsLoading(false);

@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { registerUser, loginUser,changeCurrentUSerPassword,getCurrentUser,updateAccountDetails,updateUserAvatar } from "../controllers/user.controller.js";
+import { registerUser, loginUser,changeCurrentUSerPassword,getCurrentUser,updateAccountDetails,updateUserAvatar, loggedOutUser } from "../controllers/user.controller.js";
 import { auhtMiddleware } from "../middleware/auth.js";
 import upload from "../middleware/multer.js";
 
 const router = Router()
 
-router.route('/').post(
+router.route('/register-user').post(
 
     upload.fields(
         [
@@ -17,8 +17,8 @@ router.route('/').post(
     ),
     registerUser
 )
-router.route('/').post(loginUser)
-
+router.route('/login-user').post(loginUser)
+router.route('/log-out').post(auhtMiddleware,loggedOutUser)
 router.route('/change-password').patch(auhtMiddleware,changeCurrentUSerPassword)
 router.route('/current-user').get(auhtMiddleware,getCurrentUser)
 router.route('/update-account').patch(auhtMiddleware,updateAccountDetails)

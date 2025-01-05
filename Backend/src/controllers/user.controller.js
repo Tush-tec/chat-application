@@ -27,56 +27,52 @@ const genrateAccessorRefreshTokens = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { userName, email, fullname, password } = req.body;
+  const { userName, email, fullName, password } = req.body;
 
-  if (!userName || !email || !fullname || !password) {
+  if (!userName || !email || !fullName || !password) {
     throw new ApiError(
       403,
       "Please provide all the required fields"
     )
   }
-  try {
-    const existingUser = await User.findOne({
-      $or: [{ userName }, { email }],
-    });
-    if (existingUser) {
-      throw new ApiError(409, "User with Email is already Exists!");
-    }
-
-    const avatarLocalPath = req.files?.avatar[0]?.path;
-
-    if (!avatarLocalPath) {
-      throw new ApiError(400, "Avatar Files is Required");
-    }
-
-    const user = await User.create({
-      userName,
-      email,
-      fullname,
-      password,
-    });
-
-    const checkUserCreatedorNot = await User.findById(usercreation._id).select(
-      "-password -refreshToken"
-    );
-
-    if (!checkUserCreatedorNot) {
-      throw ApiError(500, "Something Went Wrong While Registrations of user.");
-    }
-
-    return res
-      .status(200)
-      .json(
-        { status: 200 },
-        { message: "User created successfully" },
-        { user }
-      );
-  } catch (error) {
-      throw new ApiError(
-        500,
-        error.message
-      )
+  const existingUser = await User.findOne({
+    $or: [{ userName }, { email }],
+  });
+  if (existingUser) {
+    throw new ApiError(409, "User with Email is already Exists!");
   }
+
+  const avatarLocalPath = req.files?.avatar[0]?.path;
+
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar Files is Required");
+  }
+
+  const user = await User.create({
+    userName,
+    email,
+    fullName,
+    password,
+    avatar: avatarLocalPath
+  });
+
+  const checkUserCreatedorNot = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+
+  if (!checkUserCreatedorNot) {
+    throw ApiError(500, "Something Went Wrong While Registrations of user.");
+  }
+
+  return res
+    .status(200)
+    .json(
+     new ApiResponse(
+        200,
+        user,
+        "User Registered Successfully",
+      )
+    );
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -312,14 +308,13 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     );
 });
 
-
-export { 
-    registerUser,
-    loginUser,
-    loggedOutUser,
-    refereshAccessToken,
-    changeCurrentUSerPassword,
-    getCurrentUser,
-    updateUserAvatar,
-    updateAccountDetails
+export {
+  registerUser,
+  loginUser,
+  loggedOutUser,
+  refereshAccessToken,
+  changeCurrentUSerPassword,
+  getCurrentUser,
+  updateUserAvatar,
+  updateAccountDetails,
 };

@@ -10,23 +10,37 @@ const Register = () => {
     const [data,setData] =useState({
         email:"",
         userName:"",
-        password:""
+        fullName:"",
+        password:"",
+        avatar:null
     })
+
     const {register} = useAuth()
 
     const handleData = (name) => (e) => {
-        setData(
-            {
-                ...data,
-                [name]:e.target.value,
-            }
-        )
+        setData((prevData)=> ({
+          ...prevData,
+          [name]: name === "avatar" ? e.target.files[0] : e.target.value 
+        }))
     }
 
-    const handleRegister = async()=>{
-        await register(data)
-    }
+    // const handleData = (name) => (e) => {
+    //   setData((prevData) => ({
+    //     ...prevData,
+    //     [name]: name === "avatar" ? e.target.files[0] : e.target.value,
+    //   }))
+    // }
 
+    // const handleRegister = async()=>{
+    //     await register(data)
+    // }
+    const handleRegister = async () => {
+      const formData = new FormData()
+      Object.keys(data).forEach((key) => {
+        formData.append(key, data[key]) // Append all fields
+      })
+      await register(formData)
+    }
   return (
     <div className="flex justify-center items-center flex-col h-screen w-screen">
       <h1 className="text-3xl font-bold">FreeAPI Chat App</h1>
@@ -48,15 +62,25 @@ const Register = () => {
           onChange={handleData("userName")}
         />
         <Input
+          placeholder="Enter the fullName..."
+          value={data.fullName}
+          onChange={handleData("fullName")}
+        />
+        <Input
           placeholder="Enter the password..."
           type="password"
           value={data.password}
           onChange={handleData("password")}
         />
+        <Input
+          type="file"
+          accept="image"
+          onChange={handleData("avatar")}
+          className="text-sm text-gray-500"
+        />
         {/* Register button */}
         <Button
-          fullWidth
-          disabled={Object.values(data).some((val) => !val)}
+          disabled={Object.values(data).some((val) => val === "" || val  ===  null)}
           onClick={handleRegister}
         >
           Register
