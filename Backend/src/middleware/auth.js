@@ -15,13 +15,14 @@ const auhtMiddleware = asyncHandler(async (req, _, next) =>{
             throw new ApiError(401, "Unauthorized Request");
         }
 
-        const verifyJwtTokenGetFromCookies = jwt.verify(token, process.env.SECRET_FOR_ACCESSTOKEN)
+        const verifyJwtTokenGetFromCookies = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+        console.log("verifyJwtTokenGetFromCookies: ",verifyJwtTokenGetFromCookies)
 
         if(!verifyJwtTokenGetFromCookies) {
             throw new ApiError(400, "Token verification failed");
         }
 
-        console.log("verify Jwt Toke", verifyJwtTokenGetFromCookies);
+        console.log("verify Jwt Token", verifyJwtTokenGetFromCookies);
 
         const findUserByDecodedToken = await User.findById(verifyJwtTokenGetFromCookies._id).select('-password -refreshToken')
 

@@ -44,7 +44,7 @@ import messageRouter from './routes/message.router.js'
 
 
 app.use('/api/v1/users', userRouter)
-app.use('/api/v1/chat-app/chats', chatRouter)
+app.use('/api/v1/chat-app', chatRouter)
 app.use('/api/v1/chat-app/messages',  messageRouter)
 
 

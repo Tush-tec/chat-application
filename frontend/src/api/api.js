@@ -1,5 +1,4 @@
 import axios from "axios";
-import { LocalStorage } from "../utils";
 
 
 const apiClient = axios.create({
@@ -33,7 +32,7 @@ const loginUser = (data) => {
 }
 
 const logoutUser = (data) => {
-    return apiClient.get("/users/logout", data)
+    return apiClient.post("/users/log-out", data)
 }
 
 const createUserChat = (receiverId) => {
@@ -42,7 +41,7 @@ const createUserChat = (receiverId) => {
 
   
 const getAvailableUser = () =>{
-    return apiClient.get("/chat-app/chats/users")
+    return apiClient.get("/chat-app/chats/chat/users")
 }
 
 const getUserChats = () =>{

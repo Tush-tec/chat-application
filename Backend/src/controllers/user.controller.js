@@ -44,16 +44,21 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const avatarLocalPath = req.files?.avatar[0]?.path;
 
+  const avatar = await uploadOnCloudinary(avatarLocalPath)
+
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar Files is Required");
   }
 
+  if (!avatar) {
+    throw new ApiError(400, "Avatar Filed Is Required");
+  }
   const user = await User.create({
     userName,
     email,
     fullName,
     password,
-    avatar: avatarLocalPath
+    avatar: avatar?.url
   });
 
   const checkUserCreatedorNot = await User.findById(user._id).select(
@@ -152,10 +157,15 @@ const loggedOutUser = asyncHandler(async (req, res) => {
       .clearCookie("refreshToken", options)
       .json(new ApiResponse(200, {}, "User Logged-Out"));
   } catch (error) {
-    return res.status(500).json({
-      message: "Something went wrong while logging out",
-      error: error.message,
-    });
+    return res
+    .status(500)
+    .json(
+      new ApiError(
+        500,
+        "Error logging out user",
+
+      )
+    ) 
   }
 });
 

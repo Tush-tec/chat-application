@@ -23,7 +23,7 @@ const router = Router()
 
 router.use(auhtMiddleware)
 
-router.route('/').get(getAllChat)
+router.route('/chats').get(getAllChat)
 router.route('/users').get(searhOnlineUser)
 router.route('/c/:receiverId').post(
     mongoIdPathVariableValidator("receiverId"),

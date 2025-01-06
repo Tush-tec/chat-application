@@ -14,6 +14,7 @@ import Input from "../component/Input";
 import Typing from "../component/chat/Typing";
 import ChatItem from "../component/chat/ChatIteam";
 import MessageItem from "../component/chat/MessageItem";
+import { Button } from "@headlessui/react";
 
 const CONNECTED_EVENT = "connected";
 const DISCONNECT_EVENT = "disconnect";
@@ -87,7 +88,9 @@ const Chat = () => {
             )
           );
         },
-        alert // Handle errors
+        (error)=>{
+          console.error("Register failed:", error.message || error);
+         } // Handle errors
       );
     }
   };
@@ -101,7 +104,9 @@ const Chat = () => {
         const { data } = res;
         setChats(data || []);
       },
-      alert
+      (error)=>{
+        console.error("Register failed:", error.message || error);
+       }
     );
   };
 
@@ -125,7 +130,9 @@ const Chat = () => {
         const { data } = res;
         setMessages(data || []);
       },
-      alert
+      (error)=>{
+        console.error("Register failed:", error.message || error);
+       }
     );
   };
 
@@ -149,7 +156,9 @@ const Chat = () => {
         setMessages((prev) => [res.data, ...prev]); // Update messages with new data
         updateLastMessage(currentChatRef.current?._id || "", res.data);
       },
-      alert
+      (error)=>{
+        console.error("Register failed:", error.message || error);
+       }
     );
   };
   
@@ -162,7 +171,9 @@ const Chat = () => {
         setMessages((prev) => prev.filter((msg) => msg._id !== res.data.id));
         updateMessageOnDeletion(messages.chat, messages);
       },
-      alert
+      (error)=>{
+        console.error("Register failed:", error.message || error);
+       }
     );
   };
 
@@ -376,8 +387,8 @@ const Chat = () => {
             }
           />
           <button
+            className="rounded-xl border-none bg-primary text-black py-4 px-5 flex flex-shrink-0"
             onClick={() => setOpenAddChat(true)}
-            className="rounded-xl border-none bg-primary text-white py-4 px-5 flex flex-shrink-0"
           >
             + Add chat
           </button>

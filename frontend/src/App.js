@@ -29,13 +29,15 @@ const App = () => {
         }
       ></Route>
 
+
+
       {/* Private chat route: Can only be accessed by authenticated users */}
       <Route
         path="/chat"
         element={
-          <PrivateRoute>
+          // <PrivateRoute>
             <Chat />
-          </PrivateRoute>
+          // </PrivateRoute>
         }
       />
 
@@ -45,7 +47,7 @@ const App = () => {
         element={
           // <PublicRoute>
             <Login/>
-          // </PublicRoute>
+        //  </PublicRoute>
         }
       />
 

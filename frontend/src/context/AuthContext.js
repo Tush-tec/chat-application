@@ -64,10 +64,12 @@ const AuthProvider = ({ children }) => {
       () => {
         setUser(null);
         setToken(null);
-        localStorage.clear();
+        LocalStorage.clear();
         navigate('/login');
       },
-      alert
+      (error)=>{
+        console.error("Log-out failed:", error.message || error);
+       }
     );
   };
 

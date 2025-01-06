@@ -220,8 +220,8 @@ const AddChatModal= ({ open, onClose, onSuccess }) => {
                       value={isGroupChat ? "" : selectedUserId || ""}
                       options={users.map((user) => {
                         return {
-                          label: user.username,
-                          value: user._id,
+                          label: user?.userName,
+                          value: user?._id,
                         };
                       })}
                       onChange={({ value }) => {

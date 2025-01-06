@@ -637,7 +637,7 @@ const removeMemberFromGroup = asyncHandler(async (req, res) => {
         _id: updateGroupChatByPerformingGroupQuery._id,
       },
     },
-    ...chatCommonAggregation(),
+    ...commonAggregationForChatscommonAggregationForChats(),
   ]);
 
   const payload = chat[0];
@@ -671,7 +671,7 @@ const getAllChat = asyncHandler(async (req, res) => {
         updatedAt: -1,
       },
     },
-    ...chatCommonAggregation(),
+    ...commonAggregationForChats(),
   ]);
 
   return res
