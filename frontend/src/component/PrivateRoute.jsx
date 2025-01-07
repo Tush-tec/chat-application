@@ -9,12 +9,12 @@ const PrivateRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (!children) {
-    console.error("PrivateRoute requires children components to render.");
-    return null;
-  }
+  // if (!children) {
+  //   console.error("PrivateRoute requires children components to render.");
+  //   return null;
+  // }
 
   return children;
 };
 
-export default PrivateRoute;
+export default PrivateRoute 

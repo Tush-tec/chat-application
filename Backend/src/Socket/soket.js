@@ -1,4 +1,4 @@
-import cookieParser from 'cookie';
+import cookie from 'cookie-parser'
 import jwt from 'jsonwebtoken'
 import { Server, Socket } from "socket.io";
 import { ChatEventEnum, AvailableChatEvents } from '../constant.js';
@@ -18,10 +18,6 @@ import { ApiError } from '../utils/ApiError.js';
 
   
 
-/**
- * @description This function is responsible to allow user to join the chat represented by chatId (chatId). event happens when user switches between the chats
- * @param {Socket<import("socket.io/dist/typed-events").DefaultEventsMap, import("socket.io/dist/typed-events").DefaultEventsMap, import("socket.io/dist/typed-events").DefaultEventsMap, any>} socket
- */
 const mountJoinChatEvent = (socket) => {
   socket.on(ChatEventEnum.JOIN_CHAT_EVENT, (chatId) => {
     console.log(`User joined the chat 🤝. chatId: `, chatId);
@@ -32,20 +28,14 @@ const mountJoinChatEvent = (socket) => {
   });
 };
 
-/**
- * @description This function is responsible to emit the typing event to the other participants of the chat
- * @param {Socket<import("socket.io/dist/typed-events").DefaultEventsMap, import("socket.io/dist/typed-events").DefaultEventsMap, import("socket.io/dist/typed-events").DefaultEventsMap, any>} socket
- */
+
 const mountParticipantTypingEvent = (socket) => {
   socket.on(ChatEventEnum.TYPING_EVENT, (chatId) => {
     socket.in(chatId).emit(ChatEventEnum.TYPING_EVENT, chatId);
   });
 };
 
-/**
- * @description This function is responsible to emit the stopped typing event to the other participants of the chat
- * @param {Socket<import("socket.io/dist/typed-events").DefaultEventsMap, import("socket.io/dist/typed-events").DefaultEventsMap, import("socket.io/dist/typed-events").DefaultEventsMap, any>} socket
- */
+
 const mountParticipantStoppedTypingEvent = (socket) => {
   socket.on(ChatEventEnum.STOP_TYPING_EVENT, (chatId) => {
     socket.in(chatId).emit(ChatEventEnum.STOP_TYPING_EVENT, chatId);
@@ -61,17 +51,17 @@ const initializeSocketIO = (io) => {
     try {
       // parse the cookies from the handshake headers (This is only possible if client has `withCredentials: true`)
       const cookies = cookie.parse(socket.handshake.headers?.cookie || "");
-
-      let token = cookies?.accessToken; // get the accessToken
-
+      let token = cookies?.accessToken; // Get token from cookies
+      
+      console.log("Token from cookies:", token);
+      
       if (!token) {
-        // If there is no access token in cookies. Check inside the handshake auth
-        token = socket.handshake.auth?.token;
+        token = socket.handshake.auth?.token; // If no token in cookies, get from handshake
+        console.log("Token from handshake:", token);
       }
-
+      
       if (!token) {
-        // Token is required for the socket to work
-        throw new ApiError(401, "Un-authorized handshake. Token is missing");
+        throw new ApiError(401, "Unauthorized handshake. Token is missing");
       }
 
       const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET); // decode the token
@@ -90,7 +80,8 @@ const initializeSocketIO = (io) => {
       // still we want to emit some socket events to the user.
       // so that the client can catch the event and show the notifications.
       socket.join(user._id.toString());
-      socket.emit(ChatEventEnum.CONNECTED_EVENT); // emit the connected event so that client is aware
+      socket.emit(ChatEventEnum.CONNECTED_EVENT); // Emit connected event
+      console.log("Emitted CONNECTED_EVENT to user:", socket.user?._id);      
       console.log("User connected 🗼. userId: ", user._id.toString());
 
       // Common events that needs to be mounted on the initialization
@@ -98,29 +89,30 @@ const initializeSocketIO = (io) => {
       mountParticipantTypingEvent(socket);
       mountParticipantStoppedTypingEvent(socket);
 
+      socket.on(ChatEventEnum.JOIN_CHAT_EVENT, (chatId) => {
+        console.log(`User joined chat: ${chatId}`);
+        socket.join(chatId);
+      });
+      
       socket.on(ChatEventEnum.DISCONNECT_EVENT, () => {
-        console.log("user has disconnected 🚫. userId: " + socket.user?._id);
+        console.log(`User disconnected: ${socket.user?._id}`);
         if (socket.user?._id) {
-          socket.leave(socket.user._id);
+          socket.leave(socket.user._id.toString());
         }
       });
+      
     } catch (error) {
+      console.error("Error during socket connection:", error);
       socket.emit(
         ChatEventEnum.SOCKET_ERROR_EVENT,
         error?.message || "Something went wrong while connecting to the socket."
       );
     }
+    
   });
 };
 
-/**
- *
- * @param {import("express").Request} req - Request object to access the `io` instance set at the entry point
- * @param {string} roomId - Room where the event should be emitted
- * @param {AvailableChatEvents[0]} event - Event that should be emitted
- * @param {any} payload - Data that should be sent when emitting the event
- * @description Utility function responsible to abstract the logic of socket emission via the io instance
- */
+
 const emitSocketEvent = (req, roomId, event, payload) => {
   req.app.get("io").in(roomId).emit(event, payload);
 };

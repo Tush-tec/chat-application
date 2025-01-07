@@ -15,6 +15,8 @@ const Register = () => {
         avatar:null
     })
 
+    
+
     const {register} = useAuth()
 
     const handleData = (name) => (e) => {

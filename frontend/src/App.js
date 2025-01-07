@@ -4,14 +4,14 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Chat from "./pages/Chat";
 import { useAuth } from "./context/AuthContext";
-import PrivateRoute from "./component/PrivateRoute";
-import PublicRoute from "./component/PublicRoute";
+import PublicRoute from './component/PublicRoute'
+import PrivateRoute from './component/PrivateRoute'
 import Home from "./pages/Home";
 
 // Main App component
 const App = () => {
   // Extracting 'token' and 'user' from the authentication context
-  const { token, user } = useAuth
+  const { token, user } = useAuth()
 
   return (
     
@@ -37,7 +37,7 @@ const App = () => {
         element={
           // <PrivateRoute>
             <Chat />
-          // </PrivateRoute>
+            // </PrivateRoute>
         }
       />
 
@@ -47,7 +47,7 @@ const App = () => {
         element={
           // <PublicRoute>
             <Login/>
-        //  </PublicRoute>
+        // </PublicRoute>
         }
       />
 

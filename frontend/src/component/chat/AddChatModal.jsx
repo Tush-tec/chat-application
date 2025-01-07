@@ -5,13 +5,13 @@ import {
   XMarkIcon,
 } from "@heroicons/react/20/solid";
 import { Fragment, useEffect, useState } from "react";
-import { createGroupChat,createUserChat,getAvailableUser } from "../../api/api";
+import { createGroupChat,createUserChat,getAvailableUser, getUserChats } from "../../api/api";
 import { classNames, requestHandler } from "../../utils";
 import Button from "../Button";
 import Input from "../Input";
 import Select from "../Select";
 
-const AddChatModal= ({ open, onClose, onSuccess }) => {
+const AddChatModal= ({ open, onClose, onSuccess, value }) => {
   // State to store the list of users, initialized as an empty array
   const [users, setUsers] = useState([]);
   // State to store the name of a group, initialized as an empty string
@@ -26,20 +26,27 @@ const AddChatModal= ({ open, onClose, onSuccess }) => {
   const [creatingChat, setCreatingChat] = useState(false);
 
   // Function to fetch users
-  const getUsers = async () => {
-    // Handle the request to get available users
-    requestHandler(
-      // Callback to fetch available users
-      async () => await getAvailableUser(),
-      null, // No loading setter callback provided
-      // Success callback
-      (res) => {
-        const { data } = res; // Extract data from response
-        setUsers(data || []); // Set users data or an empty array if data is absent
-      },
-      alert 
-    );
-  };
+  useEffect(() => {
+    if (!open) return;  // If modal is not open, don't fetch users
+    getUsers();  // Call the function to fetch users when modal opens
+}, [open]);
+
+// Function to fetch users
+const getUsers = async () => {
+  requestHandler(
+    async () => await getUserChats(), // API call
+    null, // No loading setter provided
+    (res) => {
+      const { data } = res;
+      console.log("Users fetched:", data); // Log the users to check the data structure
+      setUsers(data || []); // Set the users data
+    },
+    (error) => {
+      console.error("Failed to fetch users:", error.message || error); // Error logging
+    }
+  );
+};
+
 
   // Function to create a new chat with a user
   const createNewChat = async () => {
@@ -224,7 +231,7 @@ const AddChatModal= ({ open, onClose, onSuccess }) => {
                           value: user?._id,
                         };
                       })}
-                      onChange={({ value }) => {
+                      onChange={({ }) => {
                         if (isGroupChat && !groupParticipants.includes(value)) {
                           // if user is creating a group chat track the participants in an array
                           setGroupParticipants([...groupParticipants, value]);

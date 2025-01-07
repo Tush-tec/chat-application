@@ -53,7 +53,9 @@ const AuthProvider = ({ children }) => {
         LocalStorage.set('Token', data.accessToken);
         navigate('/chat');
       },
-      alert
+      (error) => {
+        console.error("Login failed", error.message || error)
+      }
     );
   };
 
@@ -82,17 +84,15 @@ const AuthProvider = ({ children }) => {
     if (getToken && getUser && getUser._id) {
       setToken(getToken);
       setUser(getUser);
-    } else {
-      console.error()
     }
 
     setIsLoading(false);
   }, []);
 
-  // Provide authentication-related data and functions through the context
+
   return (
     <AuthContext.Provider value={{ user, token, register, login, logout }}>
-      {isLoading ? <Loader /> : children} {/* Display a loader while loading */}
+      {isLoading ? <Loader /> : children} 
     </AuthContext.Provider>
   );
 };

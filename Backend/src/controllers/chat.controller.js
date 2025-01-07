@@ -82,7 +82,7 @@ const searhOnlineUser = asyncHandler(async (req, res) => {
   /**
    *  Check Who is not Logged-in : through req.use._id and applied mongoDb Query,
    */
-  console.log("users come through req.user._id:", req.user._id);
+  console.log("users come through req.user._id:", req.user?._id);
 
   const checkingForOnUser = User.aggregate([
     {
@@ -134,7 +134,7 @@ const createAndGetOneOnOneChat = asyncHandler(async (req, res) => {
     throw ApiError(400, "Invalid receiver id");
   }
 
-  if (validationOfReciever._id.toString() === req.user._id.toString()) {
+  if (validationOfReciever?._id.toString() === req.user?._id.toString()) {
     throw new ApiError(400, "You can't chat with yourself");
   }
 
@@ -164,15 +164,15 @@ const createAndGetOneOnOneChat = asyncHandler(async (req, res) => {
     // if we find the chat that means user already has created a chat
     return res
       .status(200)
-      .json(new ApiResponse(200, chat[0], "Chat retrieved successfully"));
+      .json(new ApiResponse(200, creationOfChat[0], "Chat retrieved successfully"));
   }
 
   // if not we need to create a new one on one chat
 
   const instanceForIntializingChat = await Chat.create({
     name: "One on one chat",
-    participants: [req.user._id, new mongoose.Types.ObjectId(recieverId)], // add receiver and logged in user as participants
-    admin: req.user._id,
+    participants: [req.user?._id, new mongoose.Types.ObjectId(recieverId)], // add receiver and logged in user as participants
+    admin: req.user?._id,
   });
 
   const createChat = await Chat.aggregate([
@@ -196,13 +196,13 @@ const createAndGetOneOnOneChat = asyncHandler(async (req, res) => {
   // emit event to the receiver and sender about the new chat creation
 
   payload?.members?.forEach((participant) => {
-    if (members._id.toString() === req.user._id.toString()) return;
+    if (participant._id.toString() === req.user?._id.toString()) return;
 
     // emit event to other participants with new chat as a payload
 
     emitSocketEvent(
       req,
-      members._id?.toString(),
+      participant._id?.toString(),
       ChatEventEnum.NEW_CHAT_EVENT,
       payload
     );
@@ -661,7 +661,7 @@ const getAllChat = asyncHandler(async (req, res) => {
       $match: {
         member: {
           $elemMatch: {
-            $eq: req.user._id,
+            $eq: req.user?._id,
           },
         },
       },
@@ -681,11 +681,7 @@ const getAllChat = asyncHandler(async (req, res) => {
     );
 });
 
-/**
- *
- * @param {string} chatId
- * @description utility function responsible for removing all the messages and file attachments attached to the deleted chat
- */
+
 
 export {
   searhOnlineUser,

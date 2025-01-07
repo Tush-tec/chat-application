@@ -7,6 +7,8 @@ const apiClient = axios.create({
     timeout:120000
 })
 
+
+
 // Add an interceptor to set authorization header with user token before requests
 
 apiClient.interceptors.request.use(
@@ -36,16 +38,16 @@ const logoutUser = (data) => {
 }
 
 const createUserChat = (receiverId) => {
-    return apiClient.post(`/chat-app/chats/c/${receiverId}`);
-  };
+    return apiClient.get(`/chat-app/chats/c/${receiverId}`);
+};
 
   
 const getAvailableUser = () =>{
-    return apiClient.get("/chat-app/chats/chat/users")
+    return apiClient.get("/chat-app/chats")
 }
 
 const getUserChats = () =>{
-    return apiClient.get("/chat-app/chats")
+    return apiClient.get("/chat-app/chats/users")
 }
 
 const createGroupChat = (data)=>{
